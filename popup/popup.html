@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>实验控制台</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h2>实验配置</h2>
+    
+    <div class="form-group">
+      <label>用户名：</label>
+      <input type="text" id="username" required>
+    </div>
+
+    <div class="form-group">
+      <label>实验平台：</label>
+      <select id="platform">
+        <option value="google">Google</option>
+        <option value="bing">Bing</option>
+        <option value="perplexity">Perplexity</option>
+        <option value="you">You.com</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>实验任务：</label>
+      <select id="task">
+        <option value="task1">任务A：自然搜索</option>
+        <option value="task2">任务B：定向检索</option>
+      </select>
+    </div>
+
+    <button id="startBtn" class="primary">开始实验</button>
+    <button id="stopBtn" class="secondary" disabled>结束实验</button>
+
+    <div class="status-panel">
+      <h3>实验状态</h3>
+      <p>当前平台：<span id="currentPlatform">未启动</span></p>
+      <p>记录事件：<span id="eventCount">0</span></p>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
