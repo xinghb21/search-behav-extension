@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
       username.value = result.experimentConfig.username || '';
       platform.value = result.experimentConfig.platform || 'google';
       task.value = result.experimentConfig.task || 'task1';
+      currentPlatform.textContent = result.experimentConfig.platform || '未启动';
     }
   });
 
