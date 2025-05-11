@@ -27,6 +27,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    const startTime = Date.now();
+    chrome.storage.local.set({ startTime }, () => {
+      console.log('实验开始时间已保存:', startTime);
+    });
+
     const config = {
       username: username.value.trim(),
       platform: platform.value,
@@ -45,8 +50,36 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 停止实验
-  stopBtn.addEventListener('click', () => {
-    
+  stopBtn.addEventListener('click', async () => {
+    const endTime = Date.now();
+    const { experimentConfig } = await chrome.storage.local.get('experimentConfig');
+    const { startTime } = await chrome.storage.local.get('startTime');
+    const { scrollMeta } = await chrome.storage.local.get('scrollMeta');
+
+    const duration = startTime ? (endTime - startTime) : null;
+    const maxScrollY = scrollMeta?.maxScrollY || 0;
+
+    const payload = {
+      username: experimentConfig?.username || 'anonymous',
+      task: experimentConfig?.task || 'task1',
+      platform: experimentConfig?.platform || 'unknown',
+      duration,
+      maxScrollY
+    };
+
+    const filename = `experiment/${payload.platform}/${payload.task}/${payload.username}_summary.json`;
+    const ossURL = `https://search-engine-experiment.oss-cn-beijing.aliyuncs.com/${filename}`;
+
+    await fetch(ossURL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(res => {
+      console.log('实验汇总数据已上传:', filename);
+    }).catch(err => {
+      console.error('上传失败:', err);
+    });
+
     chrome.storage.local.set({ experimentConfig: { isRunning: false } }, () => {
       startBtn.disabled = false;
       stopBtn.disabled = true;
