@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 停止实验
   stopBtn.addEventListener('click', () => {
+    
     chrome.storage.local.set({ experimentConfig: { isRunning: false } }, () => {
       startBtn.disabled = false;
       stopBtn.disabled = true;

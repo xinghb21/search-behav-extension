@@ -75,10 +75,13 @@ function getElementSelector(el) {
 // 初始化检查
 checkExperimentConfig().then((active) => {
   if (active) {
-    document.addEventListener('mousemove', throttle(mouseMoveHandler, 100));
-    document.addEventListener('click', clickHandler);
+    document.addEventListener('mousemove', throttle(mouseMoveHandler, 100), true);
+    document.addEventListener('click', clickHandler, true);
     document.addEventListener('input', inputHandler, true);
     document.addEventListener('keydown', keydownHandler, true);
+    document.addEventListener('mouseenter', mouseEnterHandler, true);
+    document.addEventListener('mouseleave', mouseLeaveHandler, true);
+    document.addEventListener('scroll', scrollHandler, true);
   }
 });
 
@@ -89,15 +92,21 @@ chrome.storage.onChanged.addListener((changes) => {
     const isTarget = detectEngine() === newConfig.platform;
     
     if (newConfig.isRunning && isTarget) {
-      document.addEventListener('mousemove', throttle(mouseMoveHandler, 100));
-      document.addEventListener('click', clickHandler);
+      document.addEventListener('mousemove', throttle(mouseMoveHandler, 100), true);
+      document.addEventListener('click', clickHandler, true);
       document.addEventListener('input', inputHandler, true);
       document.addEventListener('keydown', keydownHandler, true);
+      document.addEventListener('mouseenter', mouseEnterHandler, true); 
+      document.addEventListener('mouseleave', mouseLeaveHandler, true);
+      document.addEventListener('scroll', scrollHandler, true);
     } else {
       document.removeEventListener('mousemove', mouseMoveHandler);
       document.removeEventListener('click', clickHandler);
       document.removeEventListener('input', inputHandler);
       document.removeEventListener('keydown', keydownHandler);
+      document.removeEventListener('mouseenter', mouseEnterHandler);
+      document.removeEventListener('mouseleave', mouseLeaveHandler);
+      document.removeEventListener('scroll', scrollHandler);
     }
   }
 });
@@ -149,5 +158,47 @@ const inputHandler = (e) => {
   logEvent('input', {
     value: target.value?.slice(0, 100),
     selector: getElementSelector(target)
+  });
+};
+
+let hoverStartTime = null;
+let hoverTarget = null;
+
+const HOVER_THRESHOLD = 500; // 单位：ms
+
+// 鼠标进入元素
+const mouseEnterHandler = (e) => {
+  hoverStartTime = Date.now();
+  hoverTarget = e.target;
+};
+
+// 鼠标离开元素
+const mouseLeaveHandler = (e) => {
+  if (!hoverStartTime || !hoverTarget || e.target !== hoverTarget) return;
+
+  const duration = Date.now() - hoverStartTime;
+  if (duration >= HOVER_THRESHOLD) {
+    logEvent('hover', {
+      duration,
+      selector: getElementSelector(e.target)
+    });
+  }
+
+  hoverStartTime = null;
+  hoverTarget = null;
+};
+
+let scrollCount = 0;
+let maxScrollY = 0;
+
+const scrollHandler = () => {
+  scrollCount += 1;
+  maxScrollY = Math.max(maxScrollY, window.scrollY);
+  chrome.storage.local.set({ scrollMeta: { maxScrollY } });
+
+  logEvent('scroll', {
+    scrollCount,
+    scrollY: window.scrollY,
+    maxScrollY
   });
 };
