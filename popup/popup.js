@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
       platform.value = result.experimentConfig.platform || 'google';
       task.value = result.experimentConfig.task || 'task1';
       currentPlatform.textContent = result.experimentConfig.platform || '未启动';
+      startBtn.disabled = result.experimentConfig.isRunning;
+      stopBtn.disabled = !result.experimentConfig.isRunning;
+      eventCount.textContent = result.eventCount || 0;
     }
   });
 

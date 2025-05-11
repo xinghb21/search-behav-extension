@@ -64,11 +64,21 @@ const logEvent = async (type, data) => {
   });
 };
 
+// 获取元素的简洁 CSS Selector
+function getElementSelector(el) {
+  if (!el) return '';
+  const id = el.id ? `#${el.id}` : '';
+  const cls = el.className && typeof el.className === 'string' ? '.' + el.className.trim().replace(/\s+/g, '.') : '';
+  return el.tagName.toLowerCase() + id + cls;
+}
+
 // 初始化检查
 checkExperimentConfig().then((active) => {
   if (active) {
     document.addEventListener('mousemove', throttle(mouseMoveHandler, 100));
     document.addEventListener('click', clickHandler);
+    document.addEventListener('input', inputHandler, true);
+    document.addEventListener('keydown', keydownHandler, true);
   }
 });
 
@@ -81,9 +91,13 @@ chrome.storage.onChanged.addListener((changes) => {
     if (newConfig.isRunning && isTarget) {
       document.addEventListener('mousemove', throttle(mouseMoveHandler, 100));
       document.addEventListener('click', clickHandler);
+      document.addEventListener('input', inputHandler, true);
+      document.addEventListener('keydown', keydownHandler, true);
     } else {
       document.removeEventListener('mousemove', mouseMoveHandler);
       document.removeEventListener('click', clickHandler);
+      document.removeEventListener('input', inputHandler);
+      document.removeEventListener('keydown', keydownHandler);
     }
   }
 });
@@ -102,6 +116,38 @@ const clickHandler = (e) => {
   logEvent('click', {
     x: e.clientX,
     y: e.clientY,
-    innerText: e.target.innerText?.slice(0, 50) // 截取前50字符
+    innerText: e.target.innerText?.slice(0, 100)
+  });
+};
+
+const keydownHandler = (e) => {
+  const target = e.target;
+  const tag = target.tagName.toLowerCase();
+  const type = target.type?.toLowerCase();
+
+  const isTextInput = (tag === 'textarea' || tag === 'input' && !['password', 'checkbox', 'radio', 'hidden'].includes(type)) || target.isContentEditable;
+  if (!isTextInput) return;
+
+  const key = e.key;
+  if (key === 'Enter' || key === 'Backspace') {
+    logEvent('key', {
+      key,
+      selector: getElementSelector(target)
+    });
+  }
+};
+
+// 整段文本输入记录（截取100字符）
+const inputHandler = (e) => {
+  const target = e.target;
+  const tag = target.tagName.toLowerCase();
+  const type = target.type?.toLowerCase();
+
+  const isTextInput = (tag === 'textarea' || tag === 'input' && !['password', 'checkbox', 'radio', 'hidden'].includes(type)) || target.isContentEditable;
+  if (!isTextInput) return;
+
+  logEvent('input', {
+    value: target.value?.slice(0, 100),
+    selector: getElementSelector(target)
   });
 };
