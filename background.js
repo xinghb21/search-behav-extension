@@ -8,49 +8,69 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     chrome.storage.local.set({ eventCount });
     
     eventBuffer.push({
-      ...message.data,
-      sessionId: chrome.runtime.id,
-      userConfig: (await chrome.storage.local.get('experimentConfig')).experimentConfig
+      ...message.data
     });
 
     if (eventBuffer.length >= 50) {
       flushBuffer();
     }
+
+    return true; 
   }
 });
 
 // 定时刷新缓冲区
 setInterval(flushBuffer, 10000); // 每10秒发送
 
-function flushBuffer() {
+async function flushBuffer() {
   if (eventBuffer.length === 0) return;
-  
-  chrome.storage.local.get(['userId'], (result) => {
-    const payload = {
-      userId: result.userId || 'anonymous',
-      events: eventBuffer
-    };
-    
-    // 发送到服务器
-    // fetch('https://your-analytics-endpoint.com/log', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(payload)
-    // }).then(() => {
-    //   eventBuffer = [];
-    // });
-    console.log('Sending events:', payload);
-    eventBuffer = [];
-  });
-}
 
-// 生成用户ID
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.get(['userId'], (result) => {
-    if (!result.userId) {
-      chrome.storage.local.set({ 
-        userId: 'user_' + Math.random().toString(36).substr(2, 9)
-      });
+  const config = await chrome.storage.local.get('experimentConfig');
+  if (!config.experimentConfig) {
+    console.warn('实验配置未找到，无法上传数据');
+    return;
+  }
+  console.log('实验配置:', config.experimentConfig);
+  const { isRunning, username, platform, task } = config.experimentConfig;
+  const filename = `experiment/${platform}/${task}/${username}.json`;
+  const ossURL = `https://search-engine-experiment.oss-cn-beijing.aliyuncs.com/${filename}`;
+
+  let mergedEvents = [...eventBuffer];
+
+  try {
+    const headRes = await fetch(ossURL, { method: 'HEAD' });
+    if (headRes.ok) {
+      const getRes = await fetch(ossURL);
+      if (getRes.ok) {
+        const oldData = await getRes.json();
+        if (Array.isArray(oldData.events)) {
+          mergedEvents = oldData.events.concat(eventBuffer);
+        }
+      }
     }
-  });
-});
+
+    const finalData = {
+      username: username,
+      task: task,
+      platform: platform,
+      events: mergedEvents,
+      timestamp: Date.now()
+    };
+
+    const putRes = await fetch(ossURL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(finalData)
+    });
+
+    if (putRes.ok) {
+      console.log('文件已更新:', filename);
+      eventBuffer = [];
+    } else {
+      console.warn('上传失败:', putRes.statusText);
+    }
+
+  } catch (err) {
+    console.error('OSS上传出错:', err);
+  }
+}
