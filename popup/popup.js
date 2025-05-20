@@ -47,6 +47,17 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.tabs.reload(tabs[0].id);
       });
     });
+
+    fetch('http://localhost:4389/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: config.username })
+    }).then(() => {
+      console.log('gaze 程序已启动');
+    }).catch(err => {
+      console.error('gaze 程序启动失败', err);
+    });
+
   });
 
   // 停止实验
@@ -88,6 +99,17 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.tabs.reload(tabs[0].id);
       });
     });
+
+    await fetch('http://localhost:4389/stop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: payload.username })
+    }).then(() => {
+      console.log('gaze 程序已停止，数据分析已触发');
+    }).catch(err => {
+      console.error('gaze 程序终止或数据分析失败', err);
+    });
+
   });
 
   // 实时更新事件计数
